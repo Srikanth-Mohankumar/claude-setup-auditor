@@ -8,4 +8,4 @@ For general bugs, open a GitHub issue with a minimal reproducible example that c
 
 ## Scope
 
-`claude-setup-auditor` can edit repository and user-level Claude Code configuration. Review the skill before running it in sensitive environments and keep normal source-control protections in place.
+The public `claude-setup-auditor` skill is read-only and is designed to inspect Claude Code configuration and return recommendations without editing repository or user-level files. As with any developer tool, avoid sharing confidential configuration or credentials in public bug reports.
