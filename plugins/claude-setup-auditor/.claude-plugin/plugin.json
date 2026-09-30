@@ -1,0 +1,20 @@
+{
+  "name": "claude-setup-auditor",
+  "version": "1.0.0",
+  "description": "Autonomous Claude Code configuration auditor that repairs stale instructions, skills, agents, hooks, settings, MCP/plugin usage, and unnecessary always-loaded context.",
+  "author": {
+    "name": "Srikanth Mohankumar",
+    "url": "https://github.com/Srikanth-Mohankumar"
+  },
+  "homepage": "https://github.com/Srikanth-Mohankumar/claude-setup-auditor",
+  "repository": "https://github.com/Srikanth-Mohankumar/claude-setup-auditor",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "claude-code-plugin",
+    "agent-skills",
+    "developer-tools",
+    "configuration",
+    "context-optimization"
+  ]
+}
