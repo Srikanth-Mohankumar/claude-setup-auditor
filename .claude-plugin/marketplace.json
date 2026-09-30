@@ -1,0 +1,21 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "srikanth-claude-tools",
+  "version": "1.0.0",
+  "description": "Claude Code developer tools by Srikanth Mohankumar.",
+  "owner": {
+    "name": "Srikanth Mohankumar"
+  },
+  "plugins": [
+    {
+      "name": "claude-setup-auditor",
+      "description": "Audit, repair, verify, and reduce context overhead across a Claude Code setup.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Srikanth Mohankumar"
+      },
+      "source": "./plugins/claude-setup-auditor",
+      "category": "development"
+    }
+  ]
+}
