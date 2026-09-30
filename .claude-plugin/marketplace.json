@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "claude-setup-auditor",
-      "description": "Audit, repair, verify, and reduce context overhead across a Claude Code setup.",
+      "description": "Review Claude Code configuration and recommend improvements to skills, agents, rules, hooks, integrations, and context usage.",
       "version": "1.0.0",
       "author": {
         "name": "Srikanth Mohankumar"
