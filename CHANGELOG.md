@@ -6,8 +6,8 @@ All notable changes to this project will be documented here.
 
 ### Added
 - Initial public release.
-- Autonomous Claude Code setup audit and repair skill.
+- Read-only Claude Code setup audit skill.
 - Current plugin manifest and marketplace metadata.
-- Git-safe branch, stash, commit, and backup workflow.
-- Context-footprint measurement before and after the audit.
-- Verification of JSON, skill/agent frontmatter, and documented commands.
+- Review of CLAUDE.md, rules, skills, agents, hooks, settings, MCP/plugin usage, and context overhead.
+- Prioritized file-level recommendations grounded in current Claude Code documentation.
+- Skill/agent trigger review with example prompts.
