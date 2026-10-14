@@ -32,7 +32,7 @@ ago, and a teammate's `"allow": ["Bash"]` sits in the shared settings. Nobody re
 
 ## What a scan finds
 
-This is real scanner output from a small demo project with typical drift, trimmed for length:
+These are real scanner findings from a small demo project with typical drift, condensed from the Markdown report:
 
 ```text
 Mechanical health: 18/100 (100 minus 15 per high, 5 per medium, 1 per low finding).
@@ -122,7 +122,7 @@ Code's own system prompt or plugin skill listings.
 
 ## Use it in CI
 
-The scanner runs without Claude Code. You can run it in a pre-commit hook or a pipeline:
+`scan.py` is a single standalone file that runs without Claude Code. Copy it into your repo or clone this one, then run it in a pre-commit hook or a pipeline:
 
 ```bash
 python3 plugins/setup-auditor/skills/audit-setup/scripts/scan.py . --no-user --strict

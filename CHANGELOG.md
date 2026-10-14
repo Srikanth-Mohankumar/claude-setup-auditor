@@ -7,7 +7,8 @@ All notable changes to this project will be documented here.
 ### Changed
 - **Renamed the plugin to `setup-auditor`.** `claude plugin validate` rejects plugin names
   starting with `claude-`. Reinstall with `/plugin install setup-auditor@srikanth-claude-tools`;
-  commands are now `/setup-auditor:audit-setup` and `/setup-auditor:fix-setup`.
+  commands are now `/setup-auditor:audit-setup` and `/setup-auditor:fix-setup`. The marketplace
+  declares the rename in `renames`, so existing installs can migrate.
 - `audit-setup` now runs the scanner first and returns a fixed-format report with a health score,
   always-loaded token budget, top-fixes table and example trigger prompts. It is still read-only.
 - Skill frontmatter follows current docs: `version` moved under `metadata`, and `allowed-tools`

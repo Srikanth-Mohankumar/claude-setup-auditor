@@ -17,5 +17,8 @@
       "source": "./plugins/setup-auditor",
       "category": "development"
     }
-  ]
+  ],
+  "renames": {
+    "claude-setup-auditor": "setup-auditor"
+  }
 }
