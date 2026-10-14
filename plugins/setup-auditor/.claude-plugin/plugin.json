@@ -1,5 +1,5 @@
 {
-  "name": "claude-setup-auditor",
+  "name": "setup-auditor",
   "version": "1.0.0",
   "description": "Read-only Claude Code configuration auditor for skills, agents, rules, hooks, settings, integrations, and always-loaded context.",
   "author": {

@@ -2,7 +2,7 @@
 
 Keep your Claude Code setup lean, current, and useful.
 
-`claude-setup-auditor` is a public Claude Code plugin that reviews project and user-level Claude configuration against current Claude Code documentation, identifies stale or duplicated setup, and recommends concrete ways to reduce always-loaded context and improve skill/agent quality.
+`setup-auditor` is a public Claude Code plugin that reviews project and user-level Claude configuration against current Claude Code documentation, identifies stale or duplicated setup, and recommends concrete ways to reduce always-loaded context and improve skill/agent quality.
 
 ## Why this exists
 
@@ -41,7 +41,7 @@ Inside Claude Code:
 
 ```text
 /plugin marketplace add Srikanth-Mohankumar/claude-setup-auditor
-/plugin install claude-setup-auditor@srikanth-claude-tools
+/plugin install setup-auditor@srikanth-claude-tools
 ```
 
 ## Usage
@@ -49,13 +49,13 @@ Inside Claude Code:
 Audit the current setup:
 
 ```text
-/claude-setup-auditor:audit-setup
+/setup-auditor:audit-setup
 ```
 
 Scope the audit to a path:
 
 ```text
-/claude-setup-auditor:audit-setup ./backend
+/setup-auditor:audit-setup ./backend
 ```
 
 Depending on your Claude Code version/UI, the installed skill may also appear in the slash-command picker as `audit-setup`.

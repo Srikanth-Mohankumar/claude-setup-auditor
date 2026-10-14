@@ -8,13 +8,13 @@
   },
   "plugins": [
     {
-      "name": "claude-setup-auditor",
+      "name": "setup-auditor",
       "description": "Review Claude Code configuration and recommend improvements to skills, agents, rules, hooks, integrations, and context usage.",
       "version": "1.0.0",
       "author": {
         "name": "Srikanth Mohankumar"
       },
-      "source": "./plugins/claude-setup-auditor",
+      "source": "./plugins/setup-auditor",
       "category": "development"
     }
   ]
