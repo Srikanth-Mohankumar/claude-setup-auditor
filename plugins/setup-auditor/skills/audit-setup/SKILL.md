@@ -1,84 +1,87 @@
 ---
 name: audit-setup
-description: Reviews a Claude Code setup and recommends improvements. Use when the user wants to inspect, modernize, verify, or reduce context overhead in CLAUDE.md, skills, agents, rules, hooks, settings, MCP servers, plugins, commands, or ~/.claude configuration.
-argument-hint: "[optional path, e.g. ./backend]"
-allowed-tools: [Read, Glob, Grep, WebFetch]
-version: 1.0.0
+description: Audits a Claude Code setup read-only — measures how many tokens CLAUDE.md, rules, skills and agents load into every session, finds stale, duplicated, broken or badly-triggering configuration, and returns a scored, prioritized fix list. Use when the user asks to review, audit, clean up, slim down or modernize their Claude setup, CLAUDE.md, skills, agents, hooks, settings or MCP servers, or asks why a skill is not triggering or where their context is going.
+argument-hint: "[path to project, default: current directory]"
+allowed-tools: Read Glob Grep WebFetch Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/scan.py *)
+metadata:
+  version: 2.0.0
 ---
 
 # Claude setup audit
 
-Review the requested Claude Code setup and produce a concrete improvement plan without editing files.
+Audit the Claude Code setup for the project at `$ARGUMENTS` (empty means the current directory)
+plus the user's `~/.claude/` configuration. **Read-only: never edit, create or delete a file in
+this skill.** Fixing is a separate, explicitly invoked skill.
 
-Scope: $ARGUMENTS. If empty, inspect the current repository and relevant Claude configuration that is available to read.
+## 1. Measure first
 
-## 1. Verify current conventions
+Run the deterministic scanner and keep its output — it is the factual backbone of the report:
 
-Use current Claude Code documentation rather than relying on model memory. Review the latest guidance for memory files, skills, subagents, settings, hooks, the `.claude` directory, configuration debugging, and context usage.
+```
+python3 ${CLAUDE_SKILL_DIR}/scripts/scan.py <project path>
+```
 
-If current documentation cannot be retrieved, clearly state that limitation before making recommendations about structure or conventions.
+It reports always-loaded vs on-demand context per file, a mechanical health score, and findings
+with IDs (CSA001–CSA017) for broken imports, invalid JSON, dead path references, duplicated rules,
+vague or oversized skill descriptions, missing hook scripts, blanket permissions and plain-text
+secrets. Do not re-derive what it already measured, and do not contradict its numbers. If a
+finding is a false positive after reading the file, say so and why.
 
-## 2. Inventory the setup
+Never print a secret the scanner flags; refer to it by file and line only.
 
-Inspect relevant configuration, including:
+## 2. Verify conventions against current docs
 
-- root and nested `CLAUDE.md`
-- `CLAUDE.local.md`
-- `AGENTS.md`
-- `.claude/rules/`
-- `.claude/skills/`
-- `.claude/agents/`
-- `.claude/commands/`
-- `.claude/settings.json`
-- `.claude/settings.local.json`
-- `.mcp.json`
-- configured hooks
-- plugin configuration
+The scanner encodes mechanical rules; judgment calls need current docs, not memory. Fetch
+`https://code.claude.com/docs/en/claude_code_docs_map.md` and read the pages relevant to what
+this setup actually uses — usually `memory`, `skills`, `sub-agents`, `hooks`, `settings`,
+`best-practices` and `features-overview`. If the fetch fails, say so at the top of the report and
+mark convention-based recommendations as unverified.
 
-Identify what appears to load every session versus what loads on demand. Estimate the size of always-loaded instruction context when possible.
+## 3. Review what a script cannot judge
 
-## 3. Review quality
+Read the always-loaded files and every skill/agent the scanner listed, then apply
+[references/checklist.md](references/checklist.md). The questions that matter most:
 
-Check for:
+- **Earns its place?** Is each always-loaded line something Claude could not learn by reading the
+  code, and does it apply to most sessions? If not: delete, move to a nested `CLAUDE.md`, a
+  `paths:`-scoped rule, or a skill.
+- **True?** Spot-check factual claims — commands, paths, versions, framework names — against the
+  repo. A confidently wrong instruction is worse than none.
+- **Triggers?** For each skill and agent, write the prompt a user would actually type and judge
+  whether the description would match it. Look for overlapping descriptions that compete.
+- **Policy or plea?** A rule that must never be broken (protected paths, formatting, secrets)
+  belongs in a hook, not prose.
+- **Verifiable?** Are the real test/lint/build commands documented? This is usually the single
+  highest-value line in a CLAUDE.md.
 
-- stale or unverifiable instructions
-- duplicated or contradictory guidance
-- generic advice Claude can infer from code
-- directory-specific guidance placed too globally
-- conditional guidance that would fit better in an on-demand skill
-- skill descriptions that are unlikely to trigger reliably
-- overlapping skills
-- subagents with unclear responsibilities
-- policies that would be more reliable as hooks
-- unused integrations that add persistent context
-- missing or unclear verification commands
+## 4. Report
 
-## 4. Recommend improvements
+Use exactly this structure so repeated runs compare cleanly:
 
-Order recommendations by impact. For every recommendation, include:
+```
+## Setup health: <score>/100 · ~<N> tokens always loaded
+<two sentences: overall state and the single most valuable change>
 
-- the file or configuration area affected
-- what is wrong or inefficient
-- the proposed change
-- why it improves quality, reliability, or context usage
-- any risk or tradeoff
+### Top fixes
+| # | Impact | File | Problem | Change |
+(at most 7 rows, highest impact first; each row concrete enough to apply without re-reading)
 
-Do not recommend deleting or disabling something solely to reduce file count. Each recommendation must be justified by evidence from the repository or current Claude Code documentation.
+### Context budget
+<largest always-loaded items, what could move on-demand, estimated tokens saved — label as estimate>
 
-## 5. Report
+### Skills and agents
+<per item needing work: problem, proposed description, and an example prompt it should match>
 
-Return a concise audit containing:
+### Settings, hooks, MCP and plugins
+### Keep as is
+<what is already good, so nobody "fixes" it>
 
-1. overall setup health
-2. highest-impact findings
-3. always-loaded context observations
-4. skills and agents that need attention
-5. settings, hooks, MCP, or plugin findings
-6. prioritized recommended changes
-7. items that should remain unchanged
+Next step: run /setup-auditor:fix-setup to apply these on a reviewable branch.
+```
 
-For every skill or agent description you recommend changing, include an example user prompt that the improved description should match.
+Rules for the report:
 
-## Guiding principle
-
-Prefer fewer, sharper, verified instructions over a large configuration that is stale, duplicated, speculative, or permanently loaded without clear value.
+- Every recommendation cites evidence: a scanner finding ID, a file and line, or a docs page.
+- Never recommend removing something only to shrink a number; say what is lost.
+- Token savings are estimates from the scanner's chars/4 method; say so.
+- If the setup is already good, say so in two lines. Do not invent work.
