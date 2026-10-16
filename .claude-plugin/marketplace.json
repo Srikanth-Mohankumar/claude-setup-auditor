@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "srikanth-claude-tools",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Claude Code developer tools by Srikanth Mohankumar.",
   "owner": {
     "name": "Srikanth Mohankumar"
@@ -9,8 +9,8 @@
   "plugins": [
     {
       "name": "setup-auditor",
-      "description": "Measures what your Claude Code setup loads into every session, finds broken, stale and badly-triggering configuration with 16 deterministic checks, and fixes it on a reviewable git branch.",
-      "version": "2.0.0",
+      "description": "Measures what your Claude Code setup loads into every session, finds broken, stale and badly-triggering configuration with 17 deterministic checks, and fixes it on a reviewable git branch.",
+      "version": "2.1.0",
       "author": {
         "name": "Srikanth Mohankumar"
       },

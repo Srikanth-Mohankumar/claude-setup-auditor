@@ -18,6 +18,9 @@ Docs: `memory`, `best-practices`, `features-overview`
   import it (`@AGENTS.md`) or accept that Claude ignores it.
 - Contradictions between scopes: more specific scope wins, but the model still sees both. Remove
   the losing copy.
+- Copies drift. When the same rules live in several places (CLAUDE.md and AGENTS.md, a backup,
+  mirrored skill folders), pick one source and rebuild the others from it. CSA018 flags copies whose
+  wording matches but whose numbers or `values` differ; it cannot tell which copy is right.
 - Instructions must be checkable. "Be careful with the database" → "Never run migrations against
   `prod`; use `make migrate-dev`."
 - Verification commands (test, lint, typecheck, build) should be present and runnable.
