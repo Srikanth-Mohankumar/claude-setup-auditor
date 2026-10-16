@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented here.
 
+## [2.1.0] - 2026-10-16
+
+### Added
+- CSA018: flags the same rule in two copies with different numbers or `code` values, and names
+  the file that changed more recently. Copies are other agents' instruction files (AGENTS.md,
+  GEMINI.md, and the Cursor, Copilot and Windsurf rules), found automatically, plus any path given
+  with the new `--mirror` option. Suggested by a reader whose backup copy of a rulebook drifted
+  from the working copy.
+
 ## [2.0.0] - 2026-10-14
 
 ### Changed

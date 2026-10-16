@@ -5,7 +5,7 @@ argument-hint: "[path to project, default: current directory]"
 disable-model-invocation: true
 allowed-tools: Read Glob Grep WebFetch Bash(python3 ${CLAUDE_PLUGIN_ROOT}/skills/audit-setup/scripts/scan.py *)
 metadata:
-  version: 2.0.0
+  version: 2.1.0
 ---
 
 # Fix the Claude setup

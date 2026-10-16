@@ -4,7 +4,7 @@ description: Audits a Claude Code setup read-only — measures how many tokens C
 argument-hint: "[path to project, default: current directory]"
 allowed-tools: Read Glob Grep WebFetch Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/scan.py *)
 metadata:
-  version: 2.0.0
+  version: 2.1.0
 ---
 
 # Claude setup audit
