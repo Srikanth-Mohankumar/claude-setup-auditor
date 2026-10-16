@@ -22,10 +22,14 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/scan.py <project path>
 ```
 
 It reports always-loaded vs on-demand context per file, a mechanical health score, and findings
-with IDs (CSA001–CSA017) for broken imports, invalid JSON, dead path references, duplicated rules,
-vague or oversized skill descriptions, missing hook scripts, blanket permissions and plain-text
-secrets. Do not re-derive what it already measured, and do not contradict its numbers. If a
+with IDs (CSA001–CSA018) for broken imports, invalid JSON, dead path references, duplicated rules,
+rules whose values disagree between copies, vague or oversized skill descriptions, missing hook
+scripts, blanket permissions and plain-text secrets. Do not re-derive what it already measured, and do not contradict its numbers. If a
 finding is a false positive after reading the file, say so and why.
+
+Other agents' instruction files (AGENTS.md, GEMINI.md, Cursor, Copilot and Windsurf rules) are
+compared for conflicting values automatically. If the user keeps other copies of their rules (a
+backup, a docs page, mirrored skill folders), pass each with `--mirror <path>`.
 
 Never print a secret the scanner flags; refer to it by file and line only.
 

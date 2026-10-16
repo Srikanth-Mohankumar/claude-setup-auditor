@@ -221,6 +221,52 @@ class ScanTest(unittest.TestCase):
         write(self.root, ".claude/skills/bare/SKILL.md", "---\nname: bare\ndescription: Does a thing to files.\n---\n")  # medium
         self.assertEqual(self.scan()["score"], 100 - 15 - 5 - 5)  # too short + no trigger
 
+    # -- conflicting values (CSA018). Scenario from a reader: a working copy and a backup of the
+    # same rules drifted; updates landed in the backup, and each file looked right on its own.
+
+    def test_conflicting_value_in_declared_mirror(self):
+        write(self.root, "CLAUDE.md", "Quote the enterprise discount as 15% for annual plans.\n")
+        backup = write(self.root, "backup/rules.md", "Quote the enterprise discount as 20% for annual plans.\n")
+        os.utime(self.root / "CLAUDE.md", (1_700_000_000, 1_700_000_000))
+        os.utime(backup, (1_800_000_000, 1_800_000_000))
+        data = self.scan("--mirror", str(self.root / "backup"))
+        self.assertEqual(self.ids(data), ["CSA018"])
+        f = data["findings"][0]
+        self.assertEqual(f["severity"], "medium")
+        self.assertIn("20%", f["message"])
+        self.assertIn("15%", f["message"])
+        self.assertIn("backup/rules.md was modified more recently", f["message"])
+
+    def test_undeclared_backup_is_not_scanned(self):
+        write(self.root, "CLAUDE.md", "Quote the enterprise discount as 15% for annual plans.\n")
+        write(self.root, "backup/rules.md", "Quote the enterprise discount as 20% for annual plans.\n")
+        self.assertEqual(self.ids(self.scan()), [])
+
+    def test_conflict_between_two_loaded_files_is_high(self):
+        write(self.home, ".claude/CLAUDE.md", "Keep pull requests under 400 changed lines.\n")
+        write(self.root, "CLAUDE.md", "Keep pull requests under 250 changed lines.\n")
+        data = self.scan()
+        self.assertEqual(self.ids(data), ["CSA018"])
+        self.assertEqual(data["findings"][0]["severity"], "high")
+
+    def test_agents_md_mirror_with_different_command(self):
+        write(self.root, "CLAUDE.md", "Install dependencies with `pnpm install` before running tests.\n")
+        write(self.root, "AGENTS.md", "Install dependencies with `npm install` before running tests.\n")
+        data = self.scan()
+        self.assertEqual(self.ids(data), ["CSA018"])
+        self.assertIn("npm install", data["findings"][0]["message"])
+
+    def test_identical_mirror_is_fine(self):
+        rule = "Quote the enterprise discount as 15% for annual plans.\n"
+        write(self.root, "CLAUDE.md", rule)
+        write(self.root, ".github/copilot-instructions.md", rule)
+        self.assertEqual(self.ids(self.scan()), [])
+
+    def test_short_or_same_file_values_are_not_conflicts(self):
+        write(self.root, "CLAUDE.md", "- Step 1\n- Step 2\nRetry failed uploads 3 times.\nRetry failed uploads 5 times.\n")
+        write(self.root, "GEMINI.md", "- Step 3\n")
+        self.assertEqual(self.ids(self.scan()), [])
+
     def test_strict_exit_code(self):
         write(self.root, ".claude/settings.json", "{")
         self.scan("--strict")

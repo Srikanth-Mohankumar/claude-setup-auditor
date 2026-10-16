@@ -56,6 +56,11 @@ SECRET_PATTERNS = [
     ("bearer/secret assignment", re.compile(
         r"(?i)\"?(api[_-]?key|secret|token|password|authorization)\"?\s*[:=]\s*\"?(bearer\s+)?[A-Za-z0-9_\-./+]{24,}")),
 ]
+# Values that differ between otherwise identical rules: numbers (with $, %, decimals) and `code` spans.
+VALUE_TOKEN = re.compile(r"`[^`\n]+`|\$?\b\d[\d,]*(?:\.\d+)?%?")
+# Instruction files other agents read; they usually mirror CLAUDE.md and drift from it.
+MIRROR_FILES = ("AGENTS.md", "GEMINI.md", ".cursorrules", ".windsurfrules", ".github/copilot-instructions.md")
+MIRROR_GLOBS = (".cursor/rules/*.md", ".cursor/rules/*.mdc")
 PATH_REF = re.compile(r"`((?:\.{1,2}/|~/|/)?[A-Za-z0-9_.\-]+(?:/[A-Za-z0-9_.\-]+)+/?)`")
 
 
@@ -392,6 +397,67 @@ def check_duplicates(report: Report, registry: dict[str, list[str]]) -> None:
                 seen.setdefault(norm, (item.path, n))
 
 
+def resolve_item(item: Item, report: Report) -> Path:
+    if item.path.startswith("~"):
+        return Path(report.home + item.path[1:])
+    return Path(item.path) if os.path.isabs(item.path) else Path(report.project_root, item.path)
+
+
+def collect_mirrors(root: Path, extra: list[Path], report: Report) -> list[Path]:
+    """Instruction files Claude does not load but that should agree with what it does load."""
+    known = {resolve_item(i, report).resolve() for i in report.items}
+    found = [root / f for f in MIRROR_FILES] + [f for g in MIRROR_GLOBS for f in sorted(root.glob(g))]
+    for p in extra:
+        found += sorted(p.rglob("*.md")) if p.is_dir() else [p]
+    out = []
+    for f in found:
+        f = f.resolve()
+        if f.is_file() and f not in out and f not in known:
+            out.append(f)
+            text = read_text(f) or ""
+            report.items.append(Item(display(f, report), "mirror", "mirror", "not loaded", len(text),
+                                     text.count("\n") + 1, "compared for conflicting values only"))
+    return out
+
+
+def check_conflicting_values(report: Report, mirrors: list[Path]) -> None:
+    """Flag rules worded the same in two files but carrying different numbers or `values`."""
+    sources: list[tuple[Path, str, bool]] = []
+    for item in report.items:
+        path = resolve_item(item, report)
+        if item.kind in ("memory", "import", "rule") and item.loads == "always":
+            sources.append((path, item.path, True))
+        elif item.kind == "memory" and item.loads == "not loaded" and path not in mirrors:
+            sources.append((path, item.path, False))  # e.g. AGENTS.md ignored because CLAUDE.md exists
+    sources += [(m, display(m, report), False) for m in mirrors]
+
+    groups: dict[str, list[tuple[str, int, tuple[str, ...], bool, Path]]] = {}
+    for path, rel, loaded in sources:
+        for n, line in enumerate(strip_code_blocks(read_text(path) or "").splitlines(), start=1):
+            values = tuple(v.strip("`") for v in VALUE_TOKEN.findall(line))
+            if not values:
+                continue
+            key = re.sub(r"\W+", " ", VALUE_TOKEN.sub(" VALUE ", line)).strip().lower()
+            if sum(1 for w in key.split() if w != "value" and w.isalpha()) < 3:
+                continue  # too little wording to be sure two lines are the same rule
+            groups.setdefault(key, []).append((rel, n, values, loaded, path))
+
+    for rows in groups.values():
+        reported: set[tuple[str, str]] = set()
+        for i, (rel, n, values, loaded, path) in enumerate(rows):
+            for orel, on, ovalues, oloaded, opath in rows[:i]:
+                if orel == rel or ovalues == values or (orel, rel) in reported:
+                    continue
+                reported.add((orel, rel))
+                a, b = path.stat().st_mtime, opath.stat().st_mtime
+                newer = "same modification time" if abs(a - b) < 1 else \
+                    f"{rel if a > b else orel} was modified more recently"
+                report.add("CSA018", "high" if loaded and oloaded else "medium", rel, n,
+                           f"Same rule, different values: {', '.join(values)} here vs {', '.join(ovalues)} in "
+                           f"{orel}:{on} ({newer}). Each file looks right on its own.",
+                           "Decide which value is current, keep the rule in one file, and rebuild any copy from it.")
+
+
 # ------------------------------------------- settings, hooks, MCP, plugins
 
 
@@ -472,7 +538,7 @@ def check_gitignore(root: Path, report: Report) -> None:
 # ------------------------------------------------------------------ main
 
 
-def scan(root: Path, home: Path, include_user: bool) -> Report:
+def scan(root: Path, home: Path, include_user: bool, mirrors: list[Path] | None = None) -> Report:
     report = Report(str(root), str(home))
     seen: set[Path] = set()
     registry: dict[str, list[str]] = {}
@@ -512,6 +578,7 @@ def scan(root: Path, home: Path, include_user: bool) -> Report:
     scan_definitions(root / ".claude", "project", report, registry)
     check_duplicates(report, registry)
     check_agent_budget(report)
+    check_conflicting_values(report, collect_mirrors(root, mirrors or [], report))
 
     if include_user:
         scan_settings(home / ".claude" / "settings.json", "user", report)
@@ -584,6 +651,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--home", default=os.path.expanduser("~"), help="home directory holding .claude/ (default: ~)")
     ap.add_argument("--no-user", action="store_true", help="skip user-level ~/.claude configuration")
     ap.add_argument("--json", action="store_true", help="emit JSON instead of Markdown")
+    ap.add_argument("--mirror", action="append", default=[], metavar="PATH",
+                    help="extra file or directory of copies to check for conflicting values (repeatable)")
     ap.add_argument("--strict", action="store_true", help="exit 1 if any high-severity finding exists (for CI)")
     args = ap.parse_args(argv)
 
@@ -591,7 +660,8 @@ def main(argv: list[str] | None = None) -> int:
     if not root.is_dir():
         print(f"error: {root} is not a directory", file=sys.stderr)
         return 2
-    report = scan(root, Path(args.home).expanduser().resolve(), not args.no_user)
+    report = scan(root, Path(args.home).expanduser().resolve(), not args.no_user,
+                  [Path(m).expanduser().resolve() for m in args.mirror])
     if args.json:
         data = asdict(report)
         data["always_loaded_tokens_estimate"] = report.always_tokens
