@@ -8,7 +8,7 @@ ago, and a teammate's `"allow": ["Bash"]` sits in the shared settings. Nobody re
 
 - **Measures** how many tokens your CLAUDE.md, rules, skills, agents and auto memory load into
   *every* session, file by file, and what loads only on demand.
-- **Detects** 17 kinds of mechanical problems deterministically, with no model guessing involved:
+- **Detects** 18 kinds of mechanical problems deterministically, with no model guessing involved:
   broken `@imports`, dead paths, invalid JSON, vague skill descriptions, duplicate rules across
   scopes, copies of a rule whose numbers have drifted apart, missing hook scripts, blanket permissions and plain-text secrets.
 - **Reviews** what a script can't judge, against the *current* Claude Code docs rather than model
@@ -77,7 +77,7 @@ b52c7b5 Make skill and agent triggering reliable; gate release to manual use
 
 | Layer | What | Why |
 |---|---|---|
-| `scan.py` | Standard-library Python. Inventories every scope, estimates context per file, runs 17 checks. About 0.1s, no network. | Numbers and broken references should be facts, not model estimates. |
+| `scan.py` | Standard-library Python. Inventories every scope, estimates context per file, runs 18 checks. About 0.1s, no network. | Numbers and broken references should be facts, not model estimates. |
 | `audit-setup` skill | Runs the scanner, fetches current docs, reviews against a [checklist](plugins/setup-auditor/skills/audit-setup/references/checklist.md), and returns a fixed-format report. **Read-only.** | Judgment such as "is this true", "will this trigger" or "should this be a hook" needs a model, grounded in evidence. |
 | `fix-setup` skill | Runs only when you type it. Applies fixes on a branch, then re-scans to verify. | Changes you can review in `git diff` and undo with one command. |
 
@@ -120,6 +120,7 @@ Code's own system prompt or plugin skill listings.
 | CSA016 | low | Undocumented SKILL.md frontmatter fields, which are silently ignored |
 | CSA017 | high | Subagent descriptions over Claude Code's 15k-token warning |
 | CSA018 | high / medium | The same rule in two copies with different numbers or `values` (high when Claude loads both) |
+| CSA019 | medium / low | The same rule, reworded in one copy, with different values: a hint to check |
 
 ### Copies that drift
 
@@ -135,8 +136,11 @@ the Cursor, Copilot and Windsurf rules. Point the scanner at any other copies yo
 python3 scan.py . --mirror docs/rules-backup.md --mirror .cursor/skills
 ```
 
-The check matches rules whose wording is the same apart from the values. It doesn't catch a
-copy whose wording was also rewritten.
+CSA019 also pairs a copy that was reworded, but only by adding, removing or reordering words.
+Its findings are hints to check, not confirmed conflicts. A copy rewritten with different words,
+such as synonyms, isn't paired. That's deliberate: "retry uploads" and "retry downloads" are
+different rules, and the check stays quiet rather than raise false alarms. When in doubt, `diff`
+the copies.
 
 ## Use it in CI
 

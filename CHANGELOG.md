@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented here.
 
+## [2.2.0] - 2026-11-04
+
+### Added
+- CSA019: flags a rule that was reworded in one copy, by added, removed or reordered words,
+  and whose values also changed. CSA018 can't pair these, so before this a clean result could
+  hide drift. Findings are hints (medium when Claude loads both copies, low otherwise). Rewrites
+  that swap in different words aren't paired, to avoid false alarms. Suggested by the same reader
+  as CSA018.
+
+### Fixed
+- CSA018 no longer treats numbered-list markers ("3. ", "4. ") as values. Before, the same step
+  numbered differently in two files was reported as a conflict.
+
 ## [2.1.0] - 2026-10-16
 
 ### Added
