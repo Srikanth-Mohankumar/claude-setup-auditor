@@ -57,7 +57,15 @@ SECRET_PATTERNS = [
         r"(?i)\"?(api[_-]?key|secret|token|password|authorization)\"?\s*[:=]\s*\"?(bearer\s+)?[A-Za-z0-9_\-./+]{24,}")),
 ]
 # Values that differ between otherwise identical rules: numbers (with $, %, decimals) and `code` spans.
+LIST_MARKER = re.compile(r"^\s*(?:[-*+]\s+)?\d+[.)]\s+")  # "3. " step numbers are not values
 VALUE_TOKEN = re.compile(r"`[^`\n]+`|\$?\b\d[\d,]*(?:\.\d+)?%?")
+# Filler words ignored when deciding whether a reworded line is the same rule. Words that change
+# meaning (not, never, always, must, only, ...) are deliberately absent so they still count.
+FILLER_WORDS = frozenset(
+    "a an the to of for in on at by with as and or but is are be been was were it its this that these "
+    "those from into via per any each their our your you we they them".split())
+MIN_REWRITE_WORDS = 5  # shared content words needed before a reworded pair is trusted
+MAX_REWRITE_EXTRA = 3  # content words one copy may add before it reads as a different rule
 # Instruction files other agents read; they usually mirror CLAUDE.md and drift from it.
 MIRROR_FILES = ("AGENTS.md", "GEMINI.md", ".cursorrules", ".windsurfrules", ".github/copilot-instructions.md")
 MIRROR_GLOBS = (".cursor/rules/*.md", ".cursor/rules/*.mdc")
@@ -434,6 +442,7 @@ def check_conflicting_values(report: Report, mirrors: list[Path]) -> None:
     groups: dict[str, list[tuple[str, int, tuple[str, ...], bool, Path]]] = {}
     for path, rel, loaded in sources:
         for n, line in enumerate(strip_code_blocks(read_text(path) or "").splitlines(), start=1):
+            line = LIST_MARKER.sub("", line, count=1)
             values = tuple(v.strip("`") for v in VALUE_TOKEN.findall(line))
             if not values:
                 continue
@@ -456,6 +465,46 @@ def check_conflicting_values(report: Report, mirrors: list[Path]) -> None:
                            f"Same rule, different values: {', '.join(values)} here vs {', '.join(ovalues)} in "
                            f"{orel}:{on} ({newer}). Each file looks right on its own.",
                            "Decide which value is current, keep the rule in one file, and rebuild any copy from it.")
+
+    check_reworded_values(groups, report)
+
+
+def content_words(key: str) -> frozenset[str]:
+    words = (w for w in key.split() if w != "value" and w.isalpha() and w not in FILLER_WORDS)
+    return frozenset(w[:-1] if len(w) > 3 and w.endswith("s") else w for w in words)
+
+
+def check_reworded_values(groups: dict, report: Report) -> None:
+    """Flag a rule reworded in one copy whose values also changed (CSA019, a "go check" hint).
+
+    Two lines pair only when one copy's content words are the other's plus at most a few
+    additions: reordering, filler changes and added qualifiers pair; substituting a content word
+    (uploads -> downloads) does not, because that is usually a different rule.
+    """
+    keys_in = {}  # rel -> keys present, so a line with an exact match in the other copy is skipped
+    rows = []
+    for key, members in groups.items():
+        words = content_words(key)
+        for rel, n, values, loaded, path in members:
+            keys_in.setdefault(rel, set()).add(key)
+            if len(words) >= MIN_REWRITE_WORDS:
+                rows.append((key, words, rel, n, values, loaded, path))
+    for i, (key, words, rel, n, values, loaded, path) in enumerate(rows):
+        for okey, owords, orel, on, ovalues, oloaded, opath in rows[:i]:
+            if orel == rel or okey == key or sorted(values) == sorted(ovalues):
+                continue
+            if key in keys_in[orel] or okey in keys_in[rel]:
+                continue  # each line already has an exact counterpart in the other copy
+            small, big = sorted((words, owords), key=len)
+            if not small <= big or len(big - small) > MAX_REWRITE_EXTRA:
+                continue
+            a, b = path.stat().st_mtime, opath.stat().st_mtime
+            newer = "same modification time" if abs(a - b) < 1 else \
+                f"{rel if a > b else orel} was modified more recently"
+            report.add("CSA019", "medium" if loaded and oloaded else "low", rel, n,
+                       f"Possibly the same rule, reworded, with different values: {', '.join(values)} here vs "
+                       f"{', '.join(ovalues)} in {orel}:{on} ({newer}).",
+                       "Check whether one copy is stale; if so, keep the rule in one file and rebuild the other from it.")
 
 
 # ------------------------------------------- settings, hooks, MCP, plugins

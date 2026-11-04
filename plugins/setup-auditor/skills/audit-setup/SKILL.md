@@ -4,7 +4,7 @@ description: Audits a Claude Code setup read-only — measures how many tokens C
 argument-hint: "[path to project, default: current directory]"
 allowed-tools: Read Glob Grep WebFetch Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/scan.py *)
 metadata:
-  version: 2.1.0
+  version: 2.2.0
 ---
 
 # Claude setup audit
@@ -22,8 +22,9 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/scan.py <project path>
 ```
 
 It reports always-loaded vs on-demand context per file, a mechanical health score, and findings
-with IDs (CSA001–CSA018) for broken imports, invalid JSON, dead path references, duplicated rules,
-rules whose values disagree between copies, vague or oversized skill descriptions, missing hook
+with IDs (CSA001–CSA019) for broken imports, invalid JSON, dead path references, duplicated rules,
+rules whose values disagree between copies (CSA019 when one copy was also reworded — a hint to
+check, not a confirmed conflict), vague or oversized skill descriptions, missing hook
 scripts, blanket permissions and plain-text secrets. Do not re-derive what it already measured, and do not contradict its numbers. If a
 finding is a false positive after reading the file, say so and why.
 

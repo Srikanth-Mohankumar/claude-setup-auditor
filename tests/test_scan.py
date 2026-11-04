@@ -267,6 +267,55 @@ class ScanTest(unittest.TestCase):
         write(self.root, "GEMINI.md", "- Step 3\n")
         self.assertEqual(self.ids(self.scan()), [])
 
+    # -- reworded rules with different values (CSA019). Follow-up from the same reader: a zero from
+    # CSA018 means "nothing matched", because a reworded copy never pairs with the original.
+
+    def test_reworded_rule_with_changed_value_in_mirror(self):
+        write(self.root, "CLAUDE.md", "Quote the enterprise discount as 15% for annual plans.\n")
+        backup = write(self.root, "backup/rules.md", "For annual plans, always quote a 20% enterprise discount.\n")
+        os.utime(self.root / "CLAUDE.md", (1_700_000_000, 1_700_000_000))
+        os.utime(backup, (1_800_000_000, 1_800_000_000))
+        data = self.scan("--mirror", str(self.root / "backup"))
+        self.assertEqual(self.ids(data), ["CSA019"])
+        f = data["findings"][0]
+        self.assertEqual(f["severity"], "low")
+        self.assertIn("20%", f["message"])
+        self.assertIn("15%", f["message"])
+        self.assertIn("backup/rules.md was modified more recently", f["message"])
+
+    def test_reworded_conflict_between_loaded_files_is_medium(self):
+        write(self.home, ".claude/CLAUDE.md", "Keep pull requests under 400 changed lines of code.\n")
+        write(self.root, "CLAUDE.md", "Always keep pull requests under 250 changed lines of code, including tests.\n")
+        data = self.scan()
+        self.assertEqual(self.ids(data), ["CSA019"])
+        self.assertEqual(data["findings"][0]["severity"], "medium")
+
+    def test_similar_but_different_rules_are_not_paired(self):
+        write(self.root, "CLAUDE.md", "Retry failed uploads to the storage bucket 3 times before alerting on-call.\n")
+        write(self.root, "AGENTS.md", "Retry failed downloads from the storage bucket 5 times before alerting on-call.\n")
+        self.assertEqual(self.ids(self.scan()), [])
+
+    def test_short_reworded_lines_are_not_paired(self):
+        write(self.root, "CLAUDE.md", "Retry uploads 3 times.\n")
+        write(self.root, "AGENTS.md", "Always retry uploads 5 times.\n")
+        self.assertEqual(self.ids(self.scan()), [])
+
+    def test_reworded_rule_with_same_values_is_fine(self):
+        write(self.root, "CLAUDE.md", "Quote the enterprise discount as 15% for annual plans.\n")
+        write(self.root, "AGENTS.md", "For annual plans, always quote a 15% enterprise discount.\n")
+        self.assertEqual(self.ids(self.scan()), [])
+
+    def test_meaning_flip_is_not_treated_as_rewording(self):
+        write(self.root, "CLAUDE.md", "Always run database migrations in staging for 2 days before production.\n")
+        write(self.root, "AGENTS.md", "Never run database migrations in staging for 3 days before production.\n")
+        self.assertEqual(self.ids(self.scan()), [])
+
+    def test_list_numbers_are_not_values(self):
+        # Step numbers differ between files without being a conflicting value (seen in real mirrors).
+        write(self.root, "CLAUDE.md", "3. Ask the user before deleting any generated output files.\n")
+        write(self.root, "AGENTS.md", "4. Ask the user before deleting any generated output files.\n")
+        self.assertEqual(self.ids(self.scan()), [])
+
     def test_strict_exit_code(self):
         write(self.root, ".claude/settings.json", "{")
         self.scan("--strict")
