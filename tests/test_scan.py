@@ -267,6 +267,12 @@ class ScanTest(unittest.TestCase):
         write(self.root, "GEMINI.md", "- Step 3\n")
         self.assertEqual(self.ids(self.scan()), [])
 
+    def test_list_numbers_are_not_values(self):
+        # Step numbers differ between files without being a conflicting value (seen in real mirrors).
+        write(self.root, "CLAUDE.md", "3. Ask the user before deleting any generated output files.\n")
+        write(self.root, "AGENTS.md", "4. Ask the user before deleting any generated output files.\n")
+        self.assertEqual(self.ids(self.scan()), [])
+
     def test_strict_exit_code(self):
         write(self.root, ".claude/settings.json", "{")
         self.scan("--strict")

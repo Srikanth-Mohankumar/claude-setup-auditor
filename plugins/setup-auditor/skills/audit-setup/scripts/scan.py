@@ -57,6 +57,7 @@ SECRET_PATTERNS = [
         r"(?i)\"?(api[_-]?key|secret|token|password|authorization)\"?\s*[:=]\s*\"?(bearer\s+)?[A-Za-z0-9_\-./+]{24,}")),
 ]
 # Values that differ between otherwise identical rules: numbers (with $, %, decimals) and `code` spans.
+LIST_MARKER = re.compile(r"^\s*(?:[-*+]\s+)?\d+[.)]\s+")  # "3. " step numbers are not values
 VALUE_TOKEN = re.compile(r"`[^`\n]+`|\$?\b\d[\d,]*(?:\.\d+)?%?")
 # Instruction files other agents read; they usually mirror CLAUDE.md and drift from it.
 MIRROR_FILES = ("AGENTS.md", "GEMINI.md", ".cursorrules", ".windsurfrules", ".github/copilot-instructions.md")
@@ -434,6 +435,7 @@ def check_conflicting_values(report: Report, mirrors: list[Path]) -> None:
     groups: dict[str, list[tuple[str, int, tuple[str, ...], bool, Path]]] = {}
     for path, rel, loaded in sources:
         for n, line in enumerate(strip_code_blocks(read_text(path) or "").splitlines(), start=1):
+            line = LIST_MARKER.sub("", line, count=1)
             values = tuple(v.strip("`") for v in VALUE_TOKEN.findall(line))
             if not values:
                 continue
