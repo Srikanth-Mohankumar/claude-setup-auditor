@@ -20,7 +20,9 @@ Docs: `memory`, `best-practices`, `features-overview`
   the losing copy.
 - Copies drift. When the same rules live in several places (CLAUDE.md and AGENTS.md, a backup,
   mirrored skill folders), pick one source and rebuild the others from it. CSA018 flags copies whose
-  wording matches but whose numbers or `values` differ; it cannot tell which copy is right.
+  wording matches but whose numbers or `values` differ; CSA019 does the same when one copy only
+  added or reordered words. Neither can tell which copy is right, and a rule reworded with
+  different words (synonyms) is not paired — read the copies side by side when in doubt.
 - Instructions must be checkable. "Be careful with the database" → "Never run migrations against
   `prod`; use `make migrate-dev`."
 - Verification commands (test, lint, typecheck, build) should be present and runnable.
